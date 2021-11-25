@@ -1,0 +1,3 @@
+def add(a, b) => a + b;
+def addFive = add(_, 5);
+console.log(addFive(20))

@@ -1,0 +1,15 @@
+- Strong types (based on Nemerle and Typescript)
+- Type inference for locals
+- Classes
+- [Syntactic] macros
+- Partial evaluation
+- Blocks
+- Naive TCO
+- Nested C-style comments, single-line C++-style comments
+- Arbitrary operator definitions/overloads
+- Properties, indexers, and indexer properties
+- Callable objects
+- Quotation blocks
+- Pattern matching and deconstruction, including implicit match in function body
+- Exception handling
+- Compiles to plain JS, with or without metadata around macros and types preserved

@@ -1,0 +1,4 @@
+def foo = ["bar", "baz", "hax"];
+console.log(foo.map(x => x.toUpperCase()));
+console.log(foo.map(_.toUpperCase()));
+console.log(foo.map { _.toUpperCase() });

@@ -1,0 +1,6 @@
+def factorial(n, acc = 1) {
+	| (0, _)
+	| (1, _) => acc
+	| _ => factorial(n - 1, n * acc)
+}
+console.log(factorial(10))
