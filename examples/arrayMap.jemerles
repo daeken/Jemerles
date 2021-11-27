@@ -1,4 +1,3 @@
-def foo = ["bar", "baz", "hax"];
+def foo = array["bar", "baz", "hax"];
 console.log(foo.map(x => x.toUpperCase()));
 console.log(foo.map(_.toUpperCase()));
-console.log(foo.map { _.toUpperCase() });

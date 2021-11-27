@@ -3,7 +3,6 @@
 - Classes
 - [Syntactic] macros
 - Partial evaluation
-- Blocks
 - Naive TCO
 - Nested C-style comments, single-line C++-style comments
 - Arbitrary operator definitions/overloads
