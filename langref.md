@@ -198,6 +198,15 @@ These both are of type `any` by default, but are generally used in a way that ma
 def foo() : string { null } // This `null` is a string
 ```
 
+Void
+----
+
+```
+()
+```
+
+The void literal is the only 'value' of type `void` and is implicitly used as the return value of a function/block of type void, and explicitly used when matching nothingness or in empty code quotations.
+
 Code Literals
 =============
 
@@ -214,32 +223,131 @@ def bar(barb) { barb(barb(1)) }
 Classes
 =======
 
+```
+class Foo {
+	mutable svalue : string;
+
+	this(svalue_ : string) {
+		svalue = svalue_
+	}
+
+	append(str : string) => svalue += str;
+
+	getValue : string => svalue; // Property that only gets the current value
+
+	indirectValue : string { // Gettable and settable property to wrap svalue
+		get => svalue;
+		set => svalue = value
+	}
+
+	setOnly : string { set => svalue = value } // Set-only property
+
+	this[i : number] : string => svalue[i]; // Indexer property that gets a single character from the string, e.g. fooObject[1]
+	chars[i : number] : number => svalue.charCodeAt(i); // Indexer property that gets a character as code, e.g. fooObject.chars[1]
+}
+```
+
 Visibility/Access
 -----------------
 
-Constructors
-------------
+TODO: Do we want this? I kinda don't want this.
 
-Methods
--------
-
-Fields
-------
-
-Properties
-----------
-
-Indexers
+Generics
 --------
 
-Indexer Properties
-------------------
+```
+class LinkedList[T] {
+	static empty : LinkedList[T] = null;
+
+	head : T;
+	tail : LinkedList[T];
+
+	this(head : T, tail : LinkedList[T] = empty) {
+		this.head = head;
+		this.tail = tail
+	}
+
+	add(value : T) : LinkedList[T] => new LinkedList(T, tail);
+
+	length : number => 1 + if(tail != null) tail.length else 0;
+}
+```
 
 Interfaces
 ==========
 
+```
+interface IFoo {
+	bar : number;
+	mutable baz : string;
+
+	test() : void;
+}
+```
+
+```
+class Foo : IFoo {
+	bar = 5;
+	mutable baz = 'hi';
+
+	test() => console.log('test');
+}
+```
+
+Variants
+========
+
+```
+variant Foo {
+	| Bar
+	| Baz { hax : number }
+	| Omg { wtf : string; mutable hax : number }
+
+	toString() : string {
+		match(this) {
+			| Bar => 'Bar'
+			| Baz(h) => $'Baz with hax={h}'
+			| Omg(w, h) => $'Omg with wtf="{w}" and hax={h}'
+		}
+	}
+}
+
+console.log(new Foo.Bar());
+console.log(new Foo.Baz(13));
+console.log(new Foo.Omg('hi!', 42));
+```
+
 Macros
 ======
+
+```
+macro test() {
+	console.log('compiletime');
+	<[ console.log('runtime') ]>
+}
+test()
+```
+
+This will print `compiletime` when the code is compiled and then print `runtime` when the code is run.
+
+```
+macro while(cond, body)
+syntax('while', '(', cond, ')', body) {
+	<[
+		def loop() {
+			when($cond) {
+				$body;
+				loop()
+			}
+		}
+		loop()
+	]>
+}
+
+mutable i = 0;
+while(i < 5)
+	console.log($'While loop! {i++}')
+```
 
 Pattern Matching
 ================
@@ -288,11 +396,5 @@ Object Patterns
 Type Patterns
 -------------
 
-Blocks
-======
-
 Imports/Exports
 ===============
-
-Null Chaining
-=============
