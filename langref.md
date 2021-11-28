@@ -13,6 +13,7 @@ Type System
 
 The type system is based upon that of TypeScript. Key differences:
 
+- The `boolean` type is renamed to `bool`
 - Generics take the form `base[generic]` rather than `base<generic>`
 - Tuple types take the form `type1 * type2 * type3` rather than `[type1, type2, type3]`
 - Function types take the form `argtype1 * argtype2 -> rettype` rather than `(someName: argtype1, someOtherName: argtype2) => rettype`. Note the lack of parameter names
@@ -74,7 +75,7 @@ Array Literals
 ```
 array[] // Empty array; has type any[] unless otherwise inferred
 array[1] // Array containing a single value; has type number[]
-array[1, "foo", true] // Array containing three values of three different types; has type any[] (TODO: should this be (number|string|boolean)[] ?)
+array[1, "foo", true] // Array containing three values of three different types; has type any[] (TODO: should this be (number|string|bool)[] ?)
 ```
 
 Tuple Literals
@@ -176,7 +177,7 @@ Hexadecimal
 0xABCDEF
 ```
 
-Boolean Literals
+Bool(ean) Literals
 ================
 
 ```
@@ -320,6 +321,14 @@ console.log(new Foo.Omg('hi!', 42));
 Macros
 ======
 
+Visibility
+----------
+
+By default, macros are local only to the file in which they're defined. The `export` prefix can be attached to the definitions to make them visible from the outside if desired.
+
+Function-like
+-------------
+
 ```
 macro test() {
 	console.log('compiletime');
@@ -329,6 +338,9 @@ test()
 ```
 
 This will print `compiletime` when the code is compiled and then print `runtime` when the code is run.
+
+Syntactical
+-----------
 
 ```
 macro while(cond, body)
@@ -347,6 +359,48 @@ syntax('while', '(', cond, ')', body) {
 mutable i = 0;
 while(i < 5)
 	console.log($'While loop! {i++}')
+```
+
+The `when` structure used there is -- itself -- a macro, along with other common flow control structures.
+
+```
+macro when(cond, body)
+syntax('when', '(', cond, ')', body) {
+	<[
+		match($cond : bool) {
+			| true => $body
+			| _ => ()
+		}
+	]>
+}
+
+macro unless(cond, body)
+syntax('unless', '(', cond, ')', body) =>
+	<[
+		match($cond : bool) {
+			| false => $body
+			| _ => ()
+		}
+	]>;
+
+macro if(cond, if_, else_)
+syntax('if', '(', cond, ')', if_, 'else', else_) {
+	<[
+		match($cond : bool) {
+			| true => $if_
+			| _ => $else_
+		}
+	]>
+}
+```
+
+Operator
+--------
+
+```
+macro @and(a, b)
+operator(160, 161) => // Left and right precedence
+	<[ $a && $b ]>;
 ```
 
 Pattern Matching
