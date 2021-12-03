@@ -73,9 +73,9 @@ Array Literals
 ==============
 
 ```
-array[] // Empty array; has type any[] unless otherwise inferred
-array[1] // Array containing a single value; has type number[]
-array[1, "foo", true] // Array containing three values of three different types; has type any[] (TODO: should this be (number|string|bool)[] ?)
+[] // Empty array; has type any[] unless otherwise inferred
+[1] // Array containing a single value; has type number[]
+[1, "foo", true] // Array containing three values of three different types; has type any[] (TODO: should this be (number|string|bool)[] ?)
 ```
 
 Tuple Literals
@@ -320,6 +320,8 @@ console.log(new Foo.Omg('hi!', 42));
 
 Macros
 ======
+
+Note: Macros **must** be defined (in terms of bytes in the file, not execution or parsing order) prior to their use.
 
 Visibility
 ----------
