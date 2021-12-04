@@ -1,6 +1,9 @@
 import * as p from '../../LosingDogs/patterns.mjs';
 import { Bobbin } from '../../LosingDogs/bobbin.mjs';
 
+class ReparseException {
+}
+
 class Parser {
 	constructor() {
 		this.binaryOperators = [];
@@ -20,18 +23,6 @@ class Parser {
 		this.BodyOrCSE = p.Choice(this.Body, this.CSE);
 
 		this.statements.push(this.Expr);
-
-		this.addExpression('if', p.LooseSequence(
-			p.Literal('if'), 
-			p.Literal('('), 
-			p.Named('cond', this.Expr), 
-			p.Literal(')'), 
-			p.Named('if_', this.BodyOrCSE), 
-			p.Literal('else'), 
-			p.Named('else_', this.BodyOrCSE)
-		));
-
-		this.addExpression('foo', p.Literal('foo'));
 	}
 
 	wrapCse(value, sub) {
@@ -43,14 +34,47 @@ class Parser {
 		}
 	}
 
-	addStatement(name, stmt) { this.statements.push(p.Bind(() => ({'name': name}), stmt)); }
-	addExpression(name, expr) { this.expressions.push(p.Bind(() => ({'name': name}), expr)); }
+	addStatement(name, stmt) { this.statements.push(p.Bind(() => ({'astnode': name}), stmt)); }
+	addExpression(name, expr) {
+		const bexpr = p.Bind(() => ({'astnode': name}), expr);
+
+		let bobbinStack = [];
+		let needRecurseStack = [];
+		let curRet = p.None;
+
+		const wexpr = text => {
+			if(curRet !== p.None && curRet[0] == text.start && curRet[1] == text.end)
+				return curRet[2]
+			else if(!bobbinStack.includes(text)) {
+				bobbinStack.push(text);
+				needRecurseStack.push(false);
+				let ret = bexpr(text);
+				bobbinStack.pop();
+				const needRecurse = needRecurseStack.pop();
+				if(ret === p.None || !needRecurse) return ret;
+				const oldCurRet = curRet;
+				while(true) {
+					curRet = [text.start, text.end, ret];
+					const sret = bexpr(text);
+					if(sret === p.None || sret == ret)
+						break;
+					ret = sret;
+				}
+				curRet = oldCurRet;
+				return ret
+			} else {
+				needRecurseStack[needRecurseStack.length - 1] = true;
+				return p.None
+			}
+		};
+		this.expressions.push(wexpr);
+	}
 
 	buildGrammar() {
-		this.Expr.value = p.IgnoreLeadingWhitespace(this.wrapCse(true, p.Choice(...this.expressions)));
-		this.Stmt.value = p.IgnoreLeadingWhitespace(this.wrapCse(false, p.Choice(...this.statements)));
+		this.Expr.value = p.IgnoreLeadingWhitespace(this.wrapCse(true, p.LongestChoice(...this.expressions)));
+		this.Stmt.value = p.IgnoreLeadingWhitespace(this.wrapCse(false, p.LongestChoice(...this.statements)));
 
-		const stmtOnly = p.IgnoreLeadingWhitespace(this.wrapCse(false, p.Choice(...this.statements.filter(x => x != this.Expr))));
+		const stmtOnly = p.IgnoreLeadingWhitespace(this.wrapCse(false, p.LongestChoice(...this.statements.filter(x => x != this.Expr))));
 		const semicolon = p.Regex(/^(\s*;\s)+/);
 
 		const stmtList = text => {
@@ -94,13 +118,11 @@ class Parser {
 }
 
 const parser = new Parser();
+import { addSyntax } from './coreSyntax.mjs';
+addSyntax(parser);
+
 const ret = parser.parse(`
-foo;
-if(foo) {
-	foo
-} else
-	foo;
-foo
+foo[bar][baz](dsf, hax)[omg](wtf)(pdosj)
 `)
 
 if(ret === p.None)
@@ -112,24 +134,60 @@ else
 
 [
         {
-                "name": "foo"
-        },
-        {
-                "name": "if",
-                "cond": {
-                        "name": "foo"
+                "astnode": "call",
+                "callee": {
+                        "astnode": "call",
+                        "callee": {
+                                "astnode": "index",
+                                "base": {
+                                        "astnode": "call",
+                                        "callee": {
+                                                "astnode": "index",
+                                                "base": {
+                                                        "astnode": "index",
+                                                        "base": {
+                                                                "astnode": "identifier",
+                                                                "name": "foo"
+                                                        },
+                                                        "index": {
+                                                                "astnode": "identifier",
+                                                                "name": "bar"
+                                                        }
+                                                },
+                                                "index": {
+                                                        "astnode": "identifier",
+                                                        "name": "baz"
+                                                }
+                                        },
+                                        "arguments": [
+                                                {
+                                                        "astnode": "identifier",
+                                                        "name": "dsf"
+                                                },
+                                                {
+                                                        "astnode": "identifier",
+                                                        "name": "hax"
+                                                }
+                                        ]
+                                },
+                                "index": {
+                                        "astnode": "identifier",
+                                        "name": "omg"
+                                }
+                        },
+                        "arguments": [
+                                {
+                                        "astnode": "identifier",
+                                        "name": "wtf"
+                                }
+                        ]
                 },
-                "if_": [
+                "arguments": [
                         {
-                                "name": "foo"
+                                "astnode": "identifier",
+                                "name": "pdosj"
                         }
-                ],
-                "else_": {
-                        "name": "foo"
-                }
-        },
-        {
-                "name": "foo"
+                ]
         }
 ]
 
