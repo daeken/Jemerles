@@ -10,6 +10,7 @@ class Parser {
 		this.unaryOperators = [];
 		this.statements = [];
 		this.expressions = [];
+		this.expressionNames = [];
 
 		this.inExprStack = [false];
 
@@ -23,6 +24,8 @@ class Parser {
 		this.BodyOrCSE = p.Choice(this.Body, this.CSE);
 
 		this.statements.push(this.Expr);
+
+		this.parsing = false;
 	}
 
 	wrapCse(value, sub) {
@@ -35,7 +38,14 @@ class Parser {
 	}
 
 	addStatement(name, stmt) { this.statements.push(p.Bind(() => ({'astnode': name}), stmt)); }
+	addStatementWithTransform(name, transform, stmt) {
+		this.statements.push(p.Transform(transform, p.Bind(() => ({'astnode': name}), stmt)));
+	}
+	hasExpression(name) {
+		return this.expressionNames.includes(name);
+	}
 	addExpression(name, expr) {
+		this.expressionNames.push(name);
 		const bexpr = p.Bind(() => ({'astnode': name}), expr);
 
 		let bobbinStack = [];
@@ -68,6 +78,9 @@ class Parser {
 			}
 		};
 		this.expressions.push(wexpr);
+
+		if(this.parsing)
+			throw new ReparseException();
 	}
 
 	buildGrammar() {
@@ -111,9 +124,19 @@ class Parser {
 	}
 
 	parse(code) {
-		const grammar = this.buildGrammar();
-		const ast = grammar(new Bobbin(code));
-		return ast
+		while(true) {
+			const grammar = this.buildGrammar();
+			this.parsing = true;
+			try {
+				return grammar(new Bobbin(code));
+			} catch(e) {
+				if(e instanceof ReparseException)
+					continue;
+				throw e;
+			} finally {
+				this.parsing = false;
+			}
+		}
 	}
 }
 
@@ -122,7 +145,16 @@ import { addSyntax } from './coreSyntax.mjs';
 addSyntax(parser);
 
 const ret = parser.parse(`
-foo[bar][baz](dsf, hax)[omg](wtf)(pdosj)
+foo[bar][baz](dsf, hax)[omg](wtf)(pdosj);
+
+macro test() {
+}
+
+macro if(cond, if_, else_)
+syntax('if', '(', cond, ')', if_, 'else', else_) {
+}
+
+if(foo) { baz } else { bar }
 `)
 
 if(ret === p.None)
