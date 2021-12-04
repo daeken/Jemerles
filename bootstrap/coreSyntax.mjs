@@ -1,33 +1,43 @@
-import * as p from '../../LosingDogs/patterns.mjs';
+import { LooseSequence, Regex, Literal, Optional, Named, AddValue, BindArray, ZeroOrMore, OneOrMore } from '../../LosingDogs/patterns.mjs';
 
 export const addSyntax = parser => {
-	const name = p.Regex(/^[a-z_\$][a-z_\$0-9']*/i);
+	const name = Regex(/^[a-z_\$][a-z_\$0-9']*/i);
 
-	parser.addStatement('class', p.LooseSequence(
-		p.Named('export', p.Optional(p.Regex(/^export\s+/))), 
-		p.Regex(/^class\s+/), p.Named('name', name), 
-		p.Named('body', parser.Body)
+	const Expr = parser.Expr;
+	const Body = parser.Body;
+
+	parser.addStatement('class', LooseSequence(
+		Named('export', Optional(Regex(/^export\s+/))), 
+		Regex(/^class\s+/), Named('name', name), 
+		Named('body', Body)
 	));
 
-	parser.addExpression('index', p.LooseSequence(
-		p.Named('base', parser.Expr), 
-		p.Literal('['), 
-		p.Named('index', parser.Expr), 
-		p.Literal(']')
+	parser.addExpression('index', LooseSequence(
+		Named('base', Expr), 
+		Literal('['), 
+		Named('index', Expr), 
+		Literal(']')
 	));
 
-	parser.addExpression('call', p.LooseSequence(
-		p.Named('callee', parser.Expr), 
-		p.Literal('('), 
-		p.Named('arguments', p.BindArray(p.Optional(p.LooseSequence(
-			p.AddValue(parser.Expr), 
-			p.ZeroOrMore(p.LooseSequence(
-				p.Literal(','), 
-				p.AddValue(parser.Expr)
+	parser.addExpression('call', LooseSequence(
+		Named('callee', Expr), 
+		Literal('('), 
+		Named('arguments', BindArray(Optional(LooseSequence(
+			AddValue(Expr), 
+			ZeroOrMore(LooseSequence(
+				Literal(','), 
+				AddValue(Expr)
 			))
 		)))), 
-		p.Literal(')')
+		Optional(Literal(',')), 
+		Literal(')')
 	));
 
-	parser.addExpression('identifier', p.Named('name', name));
+	parser.addExpression('assignment', LooseSequence(
+		Named('left', Expr), 
+		Literal('='), 
+		Named('right', Expr)
+	));
+
+	parser.addExpression('identifier', Named('name', name));
 };
