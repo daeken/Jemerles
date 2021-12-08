@@ -1,7 +1,7 @@
 import { LooseSequence, Regex, Literal, Optional, Named, AddValue, BindArray, ZeroOrMore, OneOrMore, None, IgnoreLeadingWhitespace, Sequence } from '../../LosingDogs/patterns.mjs';
 
 export const addSyntax = parser => {
-	const name = Regex(/^([a-z_\$][a-z_\$0-9]*|@[a-z0-9_\-+`~!@#$%\^&*\\|\/?.,<>;:]+)/i);
+	const name = Regex(/^([a-z_$][a-z_$0-9]*|@[a-z0-9_\-+`~!@#$%^&*\\|\/?.,<>;:]+)/i);
 
 	const Expr = parser.Expr;
 	const Body = parser.Body;
@@ -23,18 +23,19 @@ export const addSyntax = parser => {
 
 	const acceptableWs = ['"\',.[](){} \t\n\r'];
 	parser.addStatementWithTransform('macro', macro => {
-		if(macro.syntax === null || parser.hasExpression(macro.name)) return macro;
+		const mn = 'macro#' + macro.name;
+		if(macro.syntax === null || parser.hasExpression(mn)) return macro;
 		
 		const syntax = macro.syntax.map(elem => {
-			if(elem.astnode == 'identifier')
+			if(elem.astnode === 'identifier')
 				return Named(elem.name, BodyOrCSE);
-			if(elem.astnode != 'plain-string')
-				throw new Exception('No idea how to handle macro syntax: ' + JSON.stringify(elem));
+			if(elem.astnode !== 'plain-string')
+				throw new Error('No idea how to handle macro syntax: ' + JSON.stringify(elem));
 			
 			const str = elem.raw_data.substring(1, elem.raw_data.length - 1);
 			return Literal(str)
 		});
-		parser.addExpression(macro.name, LooseSequence(...syntax));
+		parser.addExpression(mn, LooseSequence(...syntax));
 		return macro
 	}, LooseSequence(
 		Regex(/^macro\s+/), 
@@ -64,24 +65,18 @@ export const addSyntax = parser => {
 		Literal(')')
 	));
 
-	parser.addExpression('assignment', LooseSequence(
-		Named('left', Expr), 
-		Literal('='), 
-		Named('right', Expr)
-	));
-
 	parser.addExpression('identifier', Named('name', name));
 
 	parser.addExpression('plain-string', Named('raw_data', text => {
 		const se = text.peek(1);
-		if(se != '"' && se != "'") return None;
+		if(se !== '"' && se !== "'") return None;
 		let data = '';
 		text = text.forward(1);
 		while(true) {
 			const next = text.peek(1);
-			if(next == se)
+			if(next === se)
 				break;
-			if(next == '\\') {
+			if(next === '\\') {
 				data += text.peek(2);
 				text = text.forward(2);
 			}
@@ -92,4 +87,20 @@ export const addSyntax = parser => {
 		}
 		return [text.forward(1), se + data + se]
 	}));
+
+	parser.addExpression('list-literal', Named('values', BindArray(LooseSequence(
+		Literal('['), 
+		Optional(csexpr), 
+		Literal(']')
+	))));
+
+	parser.addExpressionWithTransform('paren-group', x => x.value, LooseSequence(
+		Literal('('), Named('value', Expr), Literal(')')
+	));
+
+	parser.addRightToLeftOperator(1, '=');
+	parser.addLeftToRightOperator(10, '+');
+	parser.addLeftToRightOperator(10, '-');
+	parser.addLeftToRightOperator(20, '*');
+	parser.addLeftToRightOperator(20, '/');
 };
