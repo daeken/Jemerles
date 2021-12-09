@@ -7,7 +7,9 @@ class ReparseException {
 
 class Parser {
 	constructor() {
-		this.binaryOperators = {};
+		this.binaryOperators = {}; // precedence : (isRightToLeft, [operators])
+		this.prefixOperators = [];
+		this.suffixOperators = [];
 		this.statements = [];
 		this.expressions = [];
 		this.expressionNames = [];
@@ -108,7 +110,6 @@ class Parser {
 			bo[1].push(operator)
 		}
 	}
-
 	addRightToLeftOperator(precedence, operator) {
 		if(this.binaryOperators[precedence] === undefined)
 			this.binaryOperators[precedence] = [true, [operator]];
@@ -120,9 +121,40 @@ class Parser {
 		}
 	}
 
+	addPrefixOperator(operator) {
+		this.prefixOperators.push(operator)
+	}
+	addSuffixOperator(operator) {
+		this.suffixOperators.push(operator)
+	}
+
 	buildGrammar() {
-		const pexpr = p.LongestChoice(...this.expressions);
-		let cexpr = pexpr;
+		let cexpr = p.LongestChoice(...this.expressions);
+
+		if(this.suffixOperators.length !== 0)
+			cexpr = p.Transform(arr => arr.reduce((v, o) => ({
+					'astnode': 'suffix-operator',
+					'value': v,
+					'operator': o
+				})),
+				p.BindArray(p.LooseSequence(
+					p.AddValue(cexpr),
+					p.ZeroOrMore(p.AddValue(p.LongestChoice(...this.suffixOperators.map(p.Literal))))
+			)));
+		if(this.prefixOperators.length !== 0)
+			cexpr = p.Transform(arr => {
+					arr.unshift(arr.pop());
+					return arr.reduce((v, o) => ({
+						'astnode': 'prefix-operator',
+						'value': v,
+						'operator': o
+					}))
+				},
+				p.BindArray(p.LooseSequence(
+					p.ZeroOrMore(p.AddValue(p.LongestChoice(...this.prefixOperators.map(p.Literal)))),
+					p.AddValue(cexpr)
+				)));
+
 		const precedences = Object.keys(this.binaryOperators);
 		precedences.sort((a, b) => b - a);
 		for(const key of precedences) {
@@ -242,6 +274,8 @@ syntax('if', '(', cond, ')', if_, 'else', else_) {
 
 asdfp = if(foo) bar else baz;
 asdfp = asdfoj + if(foo) bar else { baz = sdaf };
+
+foo = -foo*/;
 `)
 
 if(ret === p.None)

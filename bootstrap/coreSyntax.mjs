@@ -103,4 +103,8 @@ export const addSyntax = parser => {
 	parser.addLeftToRightOperator(10, '-');
 	parser.addLeftToRightOperator(20, '*');
 	parser.addLeftToRightOperator(20, '/');
+
+	parser.addPrefixOperator('-');
+	parser.addSuffixOperator('*');
+	parser.addSuffixOperator('/');
 };
