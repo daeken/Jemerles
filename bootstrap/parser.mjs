@@ -131,29 +131,27 @@ class Parser {
 	buildGrammar() {
 		let cexpr = p.LongestChoice(...this.expressions);
 
-		if(this.suffixOperators.length !== 0)
-			cexpr = p.Transform(arr => arr.reduce((v, o) => ({
-					'astnode': 'suffix-operator',
+		cexpr = p.Transform(arr => arr.reduce((v, o) => ({
+				'astnode': 'suffix-operator',
+				'value': v,
+				'operator': o
+			})),
+			p.BindArray(p.LooseSequence(
+				p.AddValue(cexpr),
+				p.ZeroOrMore(p.AddValue(p.LongestChoice(...this.suffixOperators.map(p.Literal))))
+		)));
+		cexpr = p.Transform(arr => {
+				arr.unshift(arr.pop());
+				return arr.reduce((v, o) => ({
+					'astnode': 'prefix-operator',
 					'value': v,
 					'operator': o
-				})),
-				p.BindArray(p.LooseSequence(
-					p.AddValue(cexpr),
-					p.ZeroOrMore(p.AddValue(p.LongestChoice(...this.suffixOperators.map(p.Literal))))
+				}))
+			},
+			p.BindArray(p.LooseSequence(
+				p.ZeroOrMore(p.AddValue(p.LongestChoice(...this.prefixOperators.map(p.Literal)))),
+				p.AddValue(cexpr)
 			)));
-		if(this.prefixOperators.length !== 0)
-			cexpr = p.Transform(arr => {
-					arr.unshift(arr.pop());
-					return arr.reduce((v, o) => ({
-						'astnode': 'prefix-operator',
-						'value': v,
-						'operator': o
-					}))
-				},
-				p.BindArray(p.LooseSequence(
-					p.ZeroOrMore(p.AddValue(p.LongestChoice(...this.prefixOperators.map(p.Literal)))),
-					p.AddValue(cexpr)
-				)));
 
 		const precedences = Object.keys(this.binaryOperators);
 		precedences.sort((a, b) => b - a);
